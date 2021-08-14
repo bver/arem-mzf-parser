@@ -79,43 +79,43 @@ def parse(klass, str)
   record
 end
 
-def expression(r)  # TODO: return val, comment
-  out = ''
+def expression(r)
+  out, comment = ['', '']
   until r.empty?
     if r[0] == ';'
-      out += " #{r}" # comment
+      comment = r
       r = ''
       break
     end
     term = parse(ExpressionTerm, r)
     out += term.decode
   end
-  out
+  [out, comment]
 end
 
 class RowInstr < BaseRecord
   uint16 :data
 
-  @@reg = {1 => 'B', 2 => 'C', 3 => 'D', 4 => 'E',5 => 'H', 6 => 'L', 
+  @@reg = {1 => 'B', 2 => 'C', 3 => 'D', 4 => 'E',5 => 'H', 6 => 'L', 7 => 'A',
            8 => 'BC', 9 => 'DE', 0xA => 'HL', 
            0x27 => 'symbol'}
   @@reg.default = '?'
 
-  attr :symbol
+  attr_accessor :symbol, :comment
 
-  def arg1()
+  def self.parse_instr(row, str)
+    object = parse(self, str)
+    object.symbol, object.comment = (row.instr_size > 0) ? expression(str) : ['', '']
+    object
+  end
+
+  def arg1
     b = data.to_i & 0x00FF
     arg = @@reg[b]
     (arg == 'symbol') ? @symbol : arg
   end
-
-  def self.parse_instr(row, str)
-    object = parse(self, str)
-    @symbol = row.instr_size > 1 ? expression(str) : ''
-    object
-  end
-
-  def arg2()
+  
+  def arg2
     b = (data.to_i & 0xFF00) >> 8
     arg = @@reg[b]
     (arg == 'symbol') ? @symbol : arg
@@ -142,33 +142,61 @@ File.open(source_file, 'r') do |mzf|
       puts r
     when 0xE1EC  #symbol definition
       sym = parse(RowSymbol, r)
-      puts "#{sym.symbol}=#{expression(r)}"
+      expr, comment = expression(r)
+      puts "#{sym.symbol}=#{expr}\t#{comment}"
     when 0xE1E6
-      puts "PUT #{expression(r)}"
+      expr, comment = expression(r)
+      puts "PU\t#{expr}\t#{comment}"
     when 0xE1E4  #ORG
-      puts "ORG #{expression(r)}"
+      expr, comment = expression(r)
+      puts "ORG\t#{expr}\t#{comment}"
     when 0xE1EB  #label
-      puts "#{expression(r)}:"
+      expr, comment = expression(r)
+      puts "#{expr}:\t#{comment}"
     when 0xE1E8  #DEFW
-      puts "DEFW #{expression(r)}"
+      expr, comment = expression(r)
+      puts "DEFW\t#{expr}\t#{comment}"
     when 0xE1E7  #DEFB
-      puts "DEFB #{expression(r)}"
+      expr, comment = expression(r)
+      puts "DEFB\t#{expr}\t#{comment}"
     when 0xE1EA  #DEFS
-      puts "DEFS #{expression(r)}"
+      expr, comment = expression(r)
+      puts "DEFS\t#{expr}\t#{comment}"
     when 0xE1E9  #DEFM
-      puts "DEFM #{r}"
-
+      puts "DEFM\t#{r}"
     
     when 0xE0B8
-      inst = parse(RowInstr, r)
-      puts "JP #{expression(r)}"
+      inst = RowInstr.parse_instr(row, r)
+      puts "JP\t#{inst.symbol}\t#{inst.comment}"
     when 0xDB5E
       inst = RowInstr.parse_instr(row, r)
-      puts "PUSH #{inst.arg1}"  # TODO COMMENT
+      puts "PUSH\t#{inst.arg1}\t#{inst.comment}"
+    when 0xdad2, 0xda00, 0xDA0A
+      inst = RowInstr.parse_instr(row, r)
+      puts "LD\t#{inst.arg1},#{inst.arg2}\t#{inst.comment}"
+    when 0xe126
+      inst = RowInstr.parse_instr(row, r)
+      puts "CALL\t#{inst.symbol}\t#{inst.comment}"
+    when 0xddb6
+      inst = RowInstr.parse_instr(row, r)
+      puts "INC\t#{inst.arg1}\t#{inst.comment}"
+    when 0xdb7c
+      inst = RowInstr.parse_instr(row, r)
+      puts "POP\t#{inst.arg1}\t#{inst.comment}"
+    when 0xe11c
+      inst = RowInstr.parse_instr(row, r)
+      puts "DJNZ\t#{inst.symbol}\t#{inst.comment}"
+    when 0xe13a
+      inst = RowInstr.parse_instr(row, r)
+      puts "RET\t#{inst.comment}"
+    when 0xddde
+      inst = RowInstr.parse_instr(row, r)
+      puts "DEC\t#{inst.arg1}\t#{inst.comment}"
+    when 0xdc26
+      inst = RowInstr.parse_instr(row, r)
+      puts "ADD\t#{inst.arg1},#{inst.arg2}\t#{inst.comment}"
 
-
-
-    when 0xdad2, 0xe126, 0xddb6, 0x0db7, 0xe11c, 0xdb7c, 0xe13a, 0xda00
+    when 0x0db7, 0xe1a8
       inst = parse(RowInstr, r)
       print "UNKNOWN INSTRUCTION data #{inst.decode(row.row_type)}  size #{row.instr_size}  "
       puts row.instr_size > 1 ? expression(r) : ''
