@@ -65,7 +65,8 @@ class RowSymbol < BaseRecord
 end
 
 class Row < BaseRecord
-  uint16 :row_length
+  uint8 :row_length
+  uint8 :row_unk
   uint16 :row_type
   string :line, read_length: lambda { row_length - 5 }
   uint8  :line_term  # 0x00
@@ -78,7 +79,7 @@ def parse(klass, str)
   record
 end
 
-def expression(r)
+def expression(r)  # TODO: return val, comment
   out = ''
   until r.empty?
     if r[0] == ';'
@@ -89,7 +90,7 @@ def expression(r)
     term = parse(ExpressionTerm, r)
     out += term.decode
   end
-  out + "\n"
+  out
 end
 
 File.open(source_file, 'r') do |mzf|
@@ -105,11 +106,29 @@ File.open(source_file, 'r') do |mzf|
       r = ''
     when 0xE1EC  #symbol definition
       sym = parse(RowSymbol, r)
-      print "#{sym.symbol}=#{expression(r)}"
+      puts "#{sym.symbol}=#{expression(r)}"
     when 0xE1E6
-      print "PUT #{expression(r)}"
+      puts "PUT #{expression(r)}"
     when 0xE1E4  #ORG
-      print "ORG #{expression(r)}"
+      puts "ORG #{expression(r)}"
+    when 0xE1EB  #label
+      puts "#{expression(r)}:"
+    when 0xE1E8  #DEFW
+      puts "DEFW #{expression(r)}"
+    when 0xE1E7  #DEFB
+      puts "DEFB #{expression(r)}"
+    when 0xE1EA  #DEFS
+      puts "DEFS #{expression(r)}"
+    when 0xE1E9  #DEFM
+      puts "DEFM #{expression(r)}"
+
+
+
+
+    when 0xE0B8
+      puts "UNKNOWN INSTRUCTION flags #{row.row_unk}"
+
+
     else
       raise "Unknown row type=0x#{row.row_type.to_i.to_s(16)}"  
     end
