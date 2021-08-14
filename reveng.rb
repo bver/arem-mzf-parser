@@ -2,8 +2,8 @@
 
 require 'bindata'
 
-MZF_FILE='brouk-zdroj.mzf'
-#ASM_FILE='brouk.asm.txt'
+abort "Usage:\n #$0 source.arem.mzf" unless ARGV.size == 1
+source_file = ARGV.first
 
 class BaseRecord < BinData::Record
   endian :little
@@ -54,62 +54,25 @@ class ExpressionTerm < BaseRecord
   end
 end
 
-#class Expression < BaseRecord
-#  uint8 :value_format
-#  choice :val, selection: value_format do
-#
-#  end
-#end
-
 class RowSymbol < BaseRecord
   uint8 :sym_len
   string :symbol, read_length: lambda { sym_len - 0x80 }
   uint8 :assign_sign
-  #format_constant :val
   virtual assert: lambda { assign_sign == '='.ord }
   def decode
     "#{symbol}=#{val.decode}"
   end
 end
 
-class Expression < BaseRecord
-end
-
-class RowUnknown < BaseRecord
-  def decode
-    '#UNKNOWN#'
-  end
-end
-
-class RowEmpty < BaseRecord
-  def decode
-  end
-end
-
 class Row < BaseRecord
   uint16 :row_length
   uint16 :row_type
-
-#  choice :line, selection: :row_type do
-#    string 0xE1ED, read_length: lambda { row_length - 5 }
-#    #row_empty 0xE1ED
-#    row_symbol 0xE1EC
-#    row_unknown :default
-#  end
-#  string :comment
   string :line, read_length: lambda { row_length - 5 }
   uint8  :line_term  # 0x00
   virtual assert: lambda { line_term == 0 }
-#  def decode
-#    (row_type == 0xE1ED) ? line : line.decode
-#  end
 end
 
-class RowToken < BaseRecord
-
-end
-
-File.open(MZF_FILE, 'r') do |mzf|
+File.open(source_file, 'r') do |mzf|
   h = MzfHeader.read mzf
   puts "type=#{h.ftype.to_i.to_s(16)}h size=#{h.fsize} name: #{h.name}"
   
@@ -141,15 +104,7 @@ File.open(MZF_FILE, 'r') do |mzf|
         raise "Unknown row type=0x#{row.row_type.to_i.to_s(16)}"  
       end
     end
-    #puts row.row_type.to_i.to_s(16)
-    #puts row.decode
-    #puts row.comment
   end
 end
-
-
-#File.open(ASM_FILE, 'r') do |src|
-#
-#end
 
 
