@@ -72,6 +72,26 @@ class Row < BaseRecord
   virtual assert: lambda { line_term == 0 }
 end
 
+def parse(klass, str)
+  record = klass.read str
+  str.slice!(0, record.num_bytes)
+  record
+end
+
+def expression(r)
+  out = ''
+  until r.empty?
+    if r[0] == ';'
+      out += " #{r}" # comment
+      r = ''
+      break
+    end
+    term = parse(ExpressionTerm, r)
+    out += term.decode
+  end
+  out + "\n"
+end
+
 File.open(source_file, 'r') do |mzf|
   h = MzfHeader.read mzf
   puts "type=#{h.ftype.to_i.to_s(16)}h size=#{h.fsize} name: #{h.name}"
@@ -79,30 +99,19 @@ File.open(source_file, 'r') do |mzf|
   until mzf.eof?
     row = Row.read mzf    
     r = String(row.line)
-    until r.empty?
-      r = String(row.line)
-      case row.row_type
-      when 0xE1ED  #comment
-        puts row.line
-        r = ''
-      when 0xE1EC  #symbol definition
-        sym = RowSymbol.read r
-        print "#{sym.symbol}="
-        r.slice!(0, sym.num_bytes)
-        until r.empty?
-          if r[0] == ';'
-            print " #{r}" # comment
-            r = ''
-            break
-          end
-          term = ExpressionTerm.read r
-          print term.decode
-          r.slice!(0, term.num_bytes)
-        end
-        puts ''
-      else
-        raise "Unknown row type=0x#{row.row_type.to_i.to_s(16)}"  
-      end
+    case row.row_type
+    when 0xE1ED  #comment
+      puts row.line
+      r = ''
+    when 0xE1EC  #symbol definition
+      sym = parse(RowSymbol, r)
+      print "#{sym.symbol}=#{expression(r)}"
+    when 0xE1E6
+      print "PUT #{expression(r)}"
+    when 0xE1E4  #ORG
+      print "ORG #{expression(r)}"
+    else
+      raise "Unknown row type=0x#{row.row_type.to_i.to_s(16)}"  
     end
   end
 end
