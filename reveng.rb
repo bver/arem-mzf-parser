@@ -95,17 +95,19 @@ end
 
 class RowInstr < BaseRecord
   uint16 :data
-  def decode(data1)
 
-    reg = {1 => 'B', 2 => 'C', 3 => 'D', 4 => 'E',5 => 'H', 6 => 'L', 
+  @reg = {1 => 'B', 2 => 'C', 3 => 'D', 4 => 'E',5 => 'H', 6 => 'L', 
            8 => 'BC', 9 => 'DE', 0xA => 'HL', 
            0x27 => 'symbol'}
-    reg.default = '?'
+  @reg.default = '?'
+
+  def decode(data1)
+
     b1 = (data1.to_i & 0xFF00) >> 8
     b2 = data1.to_i & 0x00FF
     b3 = (data.to_i & 0xFF00) >> 8
     b4 = data.to_i & 0x00FF
-    "#{b1.to_s(16)} #{b2.to_s(16)} #{b3.to_s(16)} #{b4.to_s(16)} arg1:#{reg[b4.to_i]}, arg2:#{reg[b3.to_i]}"
+    "#{b1.to_s(16)} #{b2.to_s(16)} #{b3.to_s(16)} #{b4.to_s(16)} arg1:#{@reg[b4.to_i]}, @arg2:#{reg[b3.to_i]}"
   end
 end
 
