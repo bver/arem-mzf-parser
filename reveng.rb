@@ -66,7 +66,7 @@ end
 
 class Row < BaseRecord
   uint8 :row_length
-  uint8 :row_unk
+  uint8 :instr_size
   uint16 :row_type
   string :line, read_length: lambda { row_length - 5 }
   uint8  :line_term  # 0x00
@@ -93,6 +93,10 @@ def expression(r)  # TODO: return val, comment
   out
 end
 
+class RowInstr < BaseRecord
+  uint16 :data
+end
+
 File.open(source_file, 'r') do |mzf|
   h = MzfHeader.read mzf
   puts "type=#{h.ftype.to_i.to_s(16)}h size=#{h.fsize} name: #{h.name}"
@@ -102,8 +106,7 @@ File.open(source_file, 'r') do |mzf|
     r = String(row.line)
     case row.row_type
     when 0xE1ED  #comment
-      puts row.line
-      r = ''
+      puts r
     when 0xE1EC  #symbol definition
       sym = parse(RowSymbol, r)
       puts "#{sym.symbol}=#{expression(r)}"
@@ -120,13 +123,15 @@ File.open(source_file, 'r') do |mzf|
     when 0xE1EA  #DEFS
       puts "DEFS #{expression(r)}"
     when 0xE1E9  #DEFM
-      puts "DEFM #{expression(r)}"
+      puts "DEFM #{r}"
 
 
 
 
-    when 0xE0B8
-      puts "UNKNOWN INSTRUCTION flags #{row.row_unk}"
+    when 0xE0B8, 0xdb5e, 0xdad2, 0xe126, 0xddb6, 0xdb7, 0xe11c, 0xdb7c, 0xe13a
+      inst = parse(RowInstr, r)
+      print "UNKNOWN INSTRUCTION data #{row.row_type.to_i.to_s(16)} inst #{inst.data. to_i.to_s(16)}  size #{row.instr_size}  "
+      puts row.instr_size > 1 ? expression(r) : ''
 
 
     else
