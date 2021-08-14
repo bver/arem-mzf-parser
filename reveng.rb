@@ -95,6 +95,18 @@ end
 
 class RowInstr < BaseRecord
   uint16 :data
+  def decode(data1)
+
+    reg = {1 => 'B', 2 => 'C', 3 => 'D', 4 => 'E',5 => 'H', 6 => 'L', 
+           8 => 'BC', 9 => 'DE', 0xA => 'HL', 
+           0x27 => 'symbol'}
+    reg.default = '?'
+    b1 = (data1.to_i & 0xFF00) >> 8
+    b2 = data1.to_i & 0x00FF
+    b3 = (data.to_i & 0xFF00) >> 8
+    b4 = data.to_i & 0x00FF
+    "#{b1.to_s(16)} #{b2.to_s(16)} #{b3.to_s(16)} #{b4.to_s(16)} arg1:#{reg[b4.to_i]}, arg2:#{reg[b3.to_i]}"
+  end
 end
 
 File.open(source_file, 'r') do |mzf|
@@ -128,9 +140,9 @@ File.open(source_file, 'r') do |mzf|
 
 
 
-    when 0xE0B8, 0xdb5e, 0xdad2, 0xe126, 0xddb6, 0xdb7, 0xe11c, 0xdb7c, 0xe13a
+    when 0xE0B8, 0xdb5e, 0xdad2, 0xe126, 0xddb6, 0x0db7, 0xe11c, 0xdb7c, 0xe13a, 0xda00
       inst = parse(RowInstr, r)
-      print "UNKNOWN INSTRUCTION data #{row.row_type.to_i.to_s(16)} inst #{inst.data. to_i.to_s(16)}  size #{row.instr_size}  "
+      print "UNKNOWN INSTRUCTION data #{inst.decode(row.row_type)}  size #{row.instr_size}  "
       puts row.instr_size > 1 ? expression(r) : ''
 
 
