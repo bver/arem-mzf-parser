@@ -101,8 +101,27 @@ class RowInstr < BaseRecord
            0x27 => 'symbol'}
   @@reg.default = '?'
 
-  def decode(data1)
+  attr :symbol
 
+  def arg1()
+    b = data.to_i & 0x00FF
+    arg = @@reg[b]
+    (arg == 'symbol') ? @symbol : arg
+  end
+
+  def self.parse_instr(row, str)
+    object = parse(self, str)
+    @symbol = row.instr_size > 1 ? expression(str) : ''
+    object
+  end
+
+  def arg2()
+    b = (data.to_i & 0xFF00) >> 8
+    arg = @@reg[b]
+    (arg == 'symbol') ? @symbol : arg
+  end
+
+  def decode(data1)
     b1 = (data1.to_i & 0xFF00) >> 8
     b2 = data1.to_i & 0x00FF
     b3 = (data.to_i & 0xFF00) >> 8
@@ -139,10 +158,17 @@ File.open(source_file, 'r') do |mzf|
     when 0xE1E9  #DEFM
       puts "DEFM #{r}"
 
+    
+    when 0xE0B8
+      inst = parse(RowInstr, r)
+      puts "JP #{expression(r)}"
+    when 0xDB5E
+      inst = RowInstr.parse_instr(row, r)
+      puts "PUSH #{inst.arg1}"  # TODO COMMENT
 
 
 
-    when 0xE0B8, 0xdb5e, 0xdad2, 0xe126, 0xddb6, 0x0db7, 0xe11c, 0xdb7c, 0xe13a, 0xda00
+    when 0xdad2, 0xe126, 0xddb6, 0x0db7, 0xe11c, 0xdb7c, 0xe13a, 0xda00
       inst = parse(RowInstr, r)
       print "UNKNOWN INSTRUCTION data #{inst.decode(row.row_type)}  size #{row.instr_size}  "
       puts row.instr_size > 1 ? expression(r) : ''
