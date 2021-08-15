@@ -98,7 +98,7 @@ class RowInstr < BaseRecord
 
   @@reg = {1 => 'B', 2 => 'C', 3 => 'D', 4 => 'E',5 => 'H', 6 => 'L', 7 => 'A',
            8 => 'BC', 9 => 'DE', 0xA => 'HL', 
-           0x27 => 'symbol'}
+           0x27 => :symbol, 0x28 => :symbol_indirect }
   @@reg.default = '?'
 
   attr_accessor :symbol, :comment
@@ -113,12 +113,25 @@ class RowInstr < BaseRecord
     b = data.to_i & 0x00FF
     arg = @@reg[b]
     (arg == 'symbol') ? @symbol : arg
+    case arg
+    when :symbol
+      @symbol
+    when :symbol_indirect
+      "(#{@symbol})"
+    else
+      arg
   end
   
   def arg2
     b = (data.to_i & 0xFF00) >> 8
     arg = @@reg[b]
-    (arg == 'symbol') ? @symbol : arg
+    case arg
+    when :symbol
+      @symbol
+    when :symbol_indirect
+      "(#{@symbol})"
+    else
+      arg
   end
 
   def decode(data1)
