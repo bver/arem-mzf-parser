@@ -113,7 +113,7 @@ class RowInstr < BaseRecord
             0 => '', 
             1 => 'B', 2 => 'C', 3 => 'D', 4 => 'E',5 => 'H', 6 => 'L', 7 => 'A',
             8 => 'BC', 9 => 'DE', 0xA => 'HL',
-            0x10 => 'NZ', 0x12 => 'NC',
+            0x10 => 'NZ', 0x11 => 'Z', 0x12 => 'NC',
             0x18 => '(HL)', 0x1A => '(DE)', 0x1C => '(C)',
             0x27 => :symbol, 0x28 => :symbol_indirect,
           }
@@ -170,10 +170,13 @@ templates = {  # instructions
   0xE0F4 => "JR\t{{arg1}},{{arg2}}\t{{comment}}",
   0xE0CC => "JR\t{{arg1}}\t{{comment}}",
   0xE0EA => "JR\t{{arg1}},{{arg2}}\t{{comment}}",
+  0xE0E0 => "JR\t{{arg1}},{{arg2}}\t{{comment}}",
 
   0xE126 => "CALL\t{{symbol}}\t{{comment}}",
   0xE13A => "RET\t{{comment}}",
+  0xE144 => "RET\t{{arg1}}\t{{comment}}",
   0xDE42 => "HALT\t{{comment}}",
+  0xDE38 => "NOP\t{{comment}}",
 
   0xDB5E => "PUSH\t{{arg1}}\t{{comment}}",
   0xDB7C => "POP\t{{arg1}}\t{{comment}}",
@@ -255,7 +258,7 @@ p sym
 #    when 0xE1E9  # DEFM
 #      puts "DEFM\t#{r}"
 
-    when  0xe0cc
+    when  0xe0e0
       inst = parse(RowInstr, r)
       print "UNKNOWN INSTRUCTION data #{inst.decode(row.row_type)}  size #{row.instr_size}  "
       puts row.instr_size > 1 ? expression(r) : ''
