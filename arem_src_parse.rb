@@ -32,26 +32,24 @@ class ExpressionTerm < BaseRecord
     string 2, read_length: lambda { value_format - 0x80 } 
   end
   def decode
-      type = @@formats[value_format]
-      case type
-      when 0
-        case value_format
-           when 1
-             val.to_i.to_s(16) + 'H'
-           when 2
-             val.to_i.to_s(2) + 'B'
-           when 3
-             val.to_s
-           else
-             raise "Unknown ExpressionTerm format=#{value_format}"
-        end
-      when 1
-        value_format.chr
-      when 2
-        val
-      else 
-        raise "Unknown ExpressionTerm type=#{type}"
+    type = @@formats[value_format]
+    case type
+    when 0
+      case value_format
+        when 1
+          val.to_i.to_s(16) + 'H'
+        when 2
+          val.to_i.to_s(2) + 'B'
+        when 3
+          val.to_s
+        else
+          raise "Unknown ExpressionTerm format=#{value_format}"
       end
+    when 1
+      value_format.chr
+    when 2
+      val
+    end
   end
 end
 
@@ -97,10 +95,14 @@ end
 class RowInstr < BaseRecord
   uint16 :data
 
-  @@reg = {1 => 'B', 2 => 'C', 3 => 'D', 4 => 'E',5 => 'H', 6 => 'L', 7 => 'A',
-           8 => 'BC', 9 => 'DE', 0xA => 'HL', 
-           0x27 => :symbol, 0x28 => :symbol_indirect }
-  @@reg.default = '?'
+  @@reg = {
+            0 => '', 
+            1 => 'B', 2 => 'C', 3 => 'D', 4 => 'E',5 => 'H', 6 => 'L', 7 => 'A',
+            8 => 'BC', 9 => 'DE', 0xA => 'HL',
+            0x10 => 'NZ', 
+            0x18 => '(HL)', 0x1A => '(DE)', 
+            0x27 => :symbol, 0x28 => :symbol_indirect,
+          }
 
   attr_accessor :symbol, :comment
 
@@ -111,6 +113,7 @@ class RowInstr < BaseRecord
   end
 
   def arg b
+    raise "Unknown argument code #{b.to_i.to_s(16)}" unless @@reg.key? b
     arg = @@reg[b]
     (arg == 'symbol') ? @symbol : arg
     case arg
@@ -140,9 +143,18 @@ class RowInstr < BaseRecord
   end
 end
 
-templates = {
+templates = {  # instructions
   0xE0B8 => "JP\t{{symbol}}\t{{comment}}",
   0xE11C => "DJNZ\t{{symbol}}\t{{comment}}",
+
+  0xDE10 => "CPL",  
+  0xDD84 => "CP\t{{arg1}}\t{{comment}}",
+  0xDD8E => "CP\t{{arg1}}\t{{comment}}",
+  0xDD98 => "CP\t{{arg1}}\t{{comment}}",
+
+
+  0xE0F4 => "JR\t{{arg1}},\t{{arg2}}\t{{comment}}",
+  0xE0CC => "JR\t{{arg1}}\t{{comment}}",
 
   0xE126 => "CALL\t{{symbol}}\t{{comment}}",
   0xE13A => "RET\t{{comment}}",
@@ -151,13 +163,30 @@ templates = {
   0xDB7C => "POP\t{{arg1}}\t{{comment}}",
   
   0xDDB6 => "INC\t{{arg1}}\t{{comment}}",
+  0xDEB0 => "INC\t{{arg1}}\t{{comment}}",
+
   0xDDDE => "DEC\t{{arg1}}\t{{comment}}",
+  0xDECE => "DEC\t{{arg1}}\t{{comment}}",
+
   0xDC26 => "ADD\t{{arg1}},{{arg2}}\t{{comment}}",
+  0xDC30 => "ADD\t{{arg1}},{{arg2}}\t{{comment}}",
 
-  0xdad2 => "LD\t{{arg1}},{{arg2}}\t{{comment}}",
-  0xda00 => "LD\t{{arg1}},{{arg2}}\t{{comment}}",
-  0xDA0A => "LD\t{{arg1}},{{arg2}}\t{{comment}}",
+  0xDA00 => "LD\t{{arg1}},{{arg2}}\t{{comment}}",
+  0xDB18 => "LD\t{{arg1}},{{arg2}}\t{{comment}}",
 
+
+  0xE1A8 => "OUT\t{{arg1}},{{arg2}}\t{{comment}}",
+  0xE16C => "IN\t{{arg1}},{{arg2}}\t{{comment}}"
+
+}
+
+misc_templates = {
+  0xE1E6 => "PUT\t{{expr}}\t{{comment}}",
+  0xE1E4 => "ORG\t{{expr}}\t{{comment}}",
+  0xE1EB => "{{expr}}:\t{{comment}}", # label
+  0xE1E8 => "DEFW\t{{expr}}\t{{comment}}",
+  0xE1E7 => "DEFB\t{{expr}}\t{{comment}}",
+  0xE1EA => "DEFS\t{{expr}}\t{{comment}}"
 }
 
 File.open(source_file, 'r') do |mzf|
@@ -168,53 +197,49 @@ File.open(source_file, 'r') do |mzf|
     row = Row.read mzf    
     r = String(row.line)
 
-    if templates.key? row.row_type.to_i
+    row_code = row.row_type.to_i
+    row_code = 0xDA00 if row_code & 0xFF00 == 0xDA00   # several LDs
+
+    if templates.key? row_code
       inst = RowInstr.parse_instr(row, r)
       line = Mustache.new
       line[:arg1] = inst.arg1
       line[:arg2] = inst.arg2
       line[:symbol] = inst.symbol
       line[:comment] = inst.comment
-      line.template = templates[row.row_type.to_i]
+      line.template = templates[row_code]
+      puts line.render
+      next
+    end
+
+    if misc_templates.key? row_code
+      puts "r.size=#{r.size} code=#{row_code.to_s(16)} row=#{row}"
+      expr, comment = expression(r)
+      line = Mustache.new
+      line[:expr] = expr 
+      line[:comment] = comment
+      line.template = misc_templates[row_code]
       puts line.render
       next
     end
 
     case row.row_type
-    when 0xE1ED  #comment only
+    when 0xE1ED  # comment only
       puts r
-    when 0xE1EC  #symbol definition
+    when 0xE1EC  # symbol definition
       sym = parse(RowSymbol, r)
       expr, comment = expression(r)
       puts "#{sym.symbol}=#{expr}\t#{comment}"
-    when 0xE1E6
-      expr, comment = expression(r)
-      puts "PUT\t#{expr}\t#{comment}"
-    when 0xE1E4  #ORG
-      expr, comment = expression(r)
-      puts "ORG\t#{expr}\t#{comment}"
-    when 0xE1EB  #label
-      expr, comment = expression(r)
-      puts "#{expr}:\t#{comment}"
-    when 0xE1E8  #DEFW
-      expr, comment = expression(r)
-      puts "DEFW\t#{expr}\t#{comment}"
-    when 0xE1E7  #DEFB
-      expr, comment = expression(r)
-      puts "DEFB\t#{expr}\t#{comment}"
-    when 0xE1EA  #DEFS
-      expr, comment = expression(r)
-      puts "DEFS\t#{expr}\t#{comment}"
-    when 0xE1E9  #DEFM
+    when 0xE1E9  # DEFM
       puts "DEFM\t#{r}"
 
-    when 0x0db7, 0xe1a8
+    when  0xe0cc
       inst = parse(RowInstr, r)
       print "UNKNOWN INSTRUCTION data #{inst.decode(row.row_type)}  size #{row.instr_size}  "
       puts row.instr_size > 1 ? expression(r) : ''
 
     else
-      raise "Unknown row type=0x#{row.row_type.to_i.to_s(16)}"  
+      raise "Unknown row type= 0x#{row.row_type.to_i.to_s(16)}"  
     end
   end
 end
