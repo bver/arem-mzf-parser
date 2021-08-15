@@ -120,6 +120,7 @@ class RowInstr < BaseRecord
       "(#{@symbol})"
     else
       arg
+    end
   end
   
   def arg2
@@ -132,6 +133,7 @@ class RowInstr < BaseRecord
       "(#{@symbol})"
     else
       arg
+    end
   end
 
   def decode(data1)
