@@ -185,7 +185,7 @@ misc_templates = {
   0xE1E4 => "ORG\t{{expr}}\t{{comment}}",
   0xE1EB => "{{expr}}:\t{{comment}}", # label
   0xE1E8 => "DEFW\t{{expr}}\t{{comment}}",
-  0xE1E7 => "DEFB\t{{expr}}\t{{comment}}",
+  #0xE1E7 => "DEFB\t{{expr}}\t{{comment}}",
   0xE1EA => "DEFS\t{{expr}}\t{{comment}}"
 }
 
@@ -213,7 +213,6 @@ File.open(source_file, 'r') do |mzf|
     end
 
     if misc_templates.key? row_code
-      puts "r.size=#{r.size} code=#{row_code.to_s(16)} row=#{row}"
       expr, comment = expression(r)
       line = Mustache.new
       line[:expr] = expr 
@@ -232,6 +231,9 @@ File.open(source_file, 'r') do |mzf|
       puts "#{sym.symbol}=#{expr}\t#{comment}"
     when 0xE1E9  # DEFM
       puts "DEFM\t#{r}"
+    when 0xE1E7  # DEFB
+      expr, comment = expression(r)
+      puts "DEFB\t#{expr}\t#{comment}"
 
     when  0xe0cc
       inst = parse(RowInstr, r)
