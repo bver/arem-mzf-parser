@@ -23,8 +23,10 @@ end
 
 class ExpressionTerm < BaseRecord
   @@formats = { 1 => 0, 2 => 0, 3 => 0, 
-                '+'.ord => 1, '-'.ord => 1, '*'.ord => 1, '/'.ord => 1, ','.ord => 1 }
+                '+'.ord => 1, '-'.ord => 1, '*'.ord => 1, '/'.ord => 1, ','.ord => 1, }
+#  ((' '.ord)..('_'.ord)).each { |ch| @@formats[ch] = 1 }
   @@formats.default = 2
+
   uint8 :value_format
   choice :val, selection: lambda { @@formats[value_format] }  do
     uint16 0  # hex, bin, dec
@@ -99,8 +101,8 @@ class RowInstr < BaseRecord
             0 => '', 
             1 => 'B', 2 => 'C', 3 => 'D', 4 => 'E',5 => 'H', 6 => 'L', 7 => 'A',
             8 => 'BC', 9 => 'DE', 0xA => 'HL',
-            0x10 => 'NZ', 
-            0x18 => '(HL)', 0x1A => '(DE)', 
+            0x10 => 'NZ', 0x12 => 'NC',
+            0x18 => '(HL)', 0x1A => '(DE)', 0x1C => '(C)',
             0x27 => :symbol, 0x28 => :symbol_indirect,
           }
 
@@ -155,9 +157,11 @@ templates = {  # instructions
 
   0xE0F4 => "JR\t{{arg1}},\t{{arg2}}\t{{comment}}",
   0xE0CC => "JR\t{{arg1}}\t{{comment}}",
+  0xE0EA => "JR\t{{arg1}},\t{{arg2}}\t{{comment}}",
 
   0xE126 => "CALL\t{{symbol}}\t{{comment}}",
   0xE13A => "RET\t{{comment}}",
+  0xDE42 => "HALT\t{{comment}}",
 
   0xDB5E => "PUSH\t{{arg1}}\t{{comment}}",
   0xDB7C => "POP\t{{arg1}}\t{{comment}}",
@@ -171,11 +175,14 @@ templates = {  # instructions
   0xDC26 => "ADD\t{{arg1}},{{arg2}}\t{{comment}}",
   0xDC30 => "ADD\t{{arg1}},{{arg2}}\t{{comment}}",
 
+  0xDD52 => "XOR\t{{arg1}}\t{{comment}}",
+
   0xDA00 => "LD\t{{arg1}},{{arg2}}\t{{comment}}",
   0xDB18 => "LD\t{{arg1}},{{arg2}}\t{{comment}}",
 
 
   0xE1A8 => "OUT\t{{arg1}},{{arg2}}\t{{comment}}",
+  0xE1B2 => "OUT\t{{arg1}},{{arg2}}\t{{comment}}",
   0xE16C => "IN\t{{arg1}},{{arg2}}\t{{comment}}"
 
 }
@@ -186,7 +193,10 @@ misc_templates = {
   0xE1EB => "{{expr}}:\t{{comment}}", # label
   0xE1E8 => "DEFW\t{{expr}}\t{{comment}}",
   0xE1E7 => "DEFB\t{{expr}}\t{{comment}}",
-  0xE1EA => "DEFS\t{{expr}}\t{{comment}}"
+  0xE1EA => "DEFS\t{{expr}}\t{{comment}}",
+  
+  #0xE1E9 => "DEFM\t{{expr}}\t{{comment}}"
+
 }
 
 File.open(source_file, 'r') do |mzf|
