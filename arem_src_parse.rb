@@ -1,6 +1,7 @@
 #!/bin/env ruby
 
 require 'bindata'
+require 'mustache'
 
 abort "Usage:\n #$0 source.arem.mzf" unless ARGV.size == 1
 source_file = ARGV.first
@@ -109,8 +110,7 @@ class RowInstr < BaseRecord
     object
   end
 
-  def arg1
-    b = data.to_i & 0x00FF
+  def arg b
     arg = @@reg[b]
     (arg == 'symbol') ? @symbol : arg
     case arg
@@ -122,18 +122,13 @@ class RowInstr < BaseRecord
       arg
     end
   end
+
+  def arg1
+    arg(data.to_i & 0x00FF)
+  end
   
   def arg2
-    b = (data.to_i & 0xFF00) >> 8
-    arg = @@reg[b]
-    case arg
-    when :symbol
-      @symbol
-    when :symbol_indirect
-      "(#{@symbol})"
-    else
-      arg
-    end
+    arg((data.to_i & 0xFF00) >> 8)
   end
 
   def decode(data1)
@@ -145,6 +140,26 @@ class RowInstr < BaseRecord
   end
 end
 
+templates = {
+  0xE0B8 => "JP\t{{symbol}}\t{{comment}}",
+  0xE11C => "DJNZ\t{{symbol}}\t{{comment}}",
+
+  0xE126 => "CALL\t{{symbol}}\t{{comment}}",
+  0xE13A => "RET\t{{comment}}",
+
+  0xDB5E => "PUSH\t{{arg1}}\t{{comment}}",
+  0xDB7C => "POP\t{{arg1}}\t{{comment}}",
+  
+  0xDDB6 => "INC\t{{arg1}}\t{{comment}}",
+  0xDDDE => "DEC\t{{arg1}}\t{{comment}}",
+  0xDC26 => "ADD\t{{arg1}},{{arg2}}\t{{comment}}",
+
+  0xdad2 => "LD\t{{arg1}},{{arg2}}\t{{comment}}",
+  0xda00 => "LD\t{{arg1}},{{arg2}}\t{{comment}}",
+  0xDA0A => "LD\t{{arg1}},{{arg2}}\t{{comment}}",
+
+}
+
 File.open(source_file, 'r') do |mzf|
   h = MzfHeader.read mzf
   puts "type=#{h.ftype.to_i.to_s(16)}h size=#{h.fsize} name: #{h.name}"
@@ -152,8 +167,21 @@ File.open(source_file, 'r') do |mzf|
   until mzf.eof?
     row = Row.read mzf    
     r = String(row.line)
+
+    if templates.key? row.row_type.to_i
+      inst = RowInstr.parse_instr(row, r)
+      line = Mustache.new
+      line[:arg1] = inst.arg1
+      line[:arg2] = inst.arg2
+      line[:symbol] = inst.symbol
+      line[:comment] = inst.comment
+      line.template = templates[row.row_type.to_i]
+      puts line.render
+      next
+    end
+
     case row.row_type
-    when 0xE1ED  #comment
+    when 0xE1ED  #comment only
       puts r
     when 0xE1EC  #symbol definition
       sym = parse(RowSymbol, r)
@@ -161,7 +189,7 @@ File.open(source_file, 'r') do |mzf|
       puts "#{sym.symbol}=#{expr}\t#{comment}"
     when 0xE1E6
       expr, comment = expression(r)
-      puts "PU\t#{expr}\t#{comment}"
+      puts "PUT\t#{expr}\t#{comment}"
     when 0xE1E4  #ORG
       expr, comment = expression(r)
       puts "ORG\t#{expr}\t#{comment}"
@@ -179,43 +207,11 @@ File.open(source_file, 'r') do |mzf|
       puts "DEFS\t#{expr}\t#{comment}"
     when 0xE1E9  #DEFM
       puts "DEFM\t#{r}"
-    
-    when 0xE0B8
-      inst = RowInstr.parse_instr(row, r)
-      puts "JP\t#{inst.symbol}\t#{inst.comment}"
-    when 0xDB5E
-      inst = RowInstr.parse_instr(row, r)
-      puts "PUSH\t#{inst.arg1}\t#{inst.comment}"
-    when 0xdad2, 0xda00, 0xDA0A
-      inst = RowInstr.parse_instr(row, r)
-      puts "LD\t#{inst.arg1},#{inst.arg2}\t#{inst.comment}"
-    when 0xe126
-      inst = RowInstr.parse_instr(row, r)
-      puts "CALL\t#{inst.symbol}\t#{inst.comment}"
-    when 0xddb6
-      inst = RowInstr.parse_instr(row, r)
-      puts "INC\t#{inst.arg1}\t#{inst.comment}"
-    when 0xdb7c
-      inst = RowInstr.parse_instr(row, r)
-      puts "POP\t#{inst.arg1}\t#{inst.comment}"
-    when 0xe11c
-      inst = RowInstr.parse_instr(row, r)
-      puts "DJNZ\t#{inst.symbol}\t#{inst.comment}"
-    when 0xe13a
-      inst = RowInstr.parse_instr(row, r)
-      puts "RET\t#{inst.comment}"
-    when 0xddde
-      inst = RowInstr.parse_instr(row, r)
-      puts "DEC\t#{inst.arg1}\t#{inst.comment}"
-    when 0xdc26
-      inst = RowInstr.parse_instr(row, r)
-      puts "ADD\t#{inst.arg1},#{inst.arg2}\t#{inst.comment}"
 
     when 0x0db7, 0xe1a8
       inst = parse(RowInstr, r)
       print "UNKNOWN INSTRUCTION data #{inst.decode(row.row_type)}  size #{row.instr_size}  "
       puts row.instr_size > 1 ? expression(r) : ''
-
 
     else
       raise "Unknown row type=0x#{row.row_type.to_i.to_s(16)}"  
