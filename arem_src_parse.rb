@@ -22,22 +22,22 @@ class MzfHeader < BaseRecord
 end
 
 class ExpressionTerm < BaseRecord
-  @@formats = { 1 => 0, 2 => 0, 3 => 0, 
-                '+'.ord => 1, '-'.ord => 1, '*'.ord => 1, '/'.ord => 1, ','.ord => 1, }
-#  ((' '.ord)..('_'.ord)).each { |ch| @@formats[ch] = 1 }
-  @@formats.default = 2
+  @@formats = { 0x01 => 0, 0x02 => 0, 0x03 => 0 }
+  ((' '.ord)..('_'.ord)).each { |ch| @@formats[ch] = 1 } # add ASCII
+  (0x80 .. 0xFF).each { |ch| @@formats[ch] = 2 } # symbols
 
   uint8 :value_format
-  choice :val, selection: lambda { @@formats[value_format] }  do
+  choice :val, selection: lambda { @@formats[value_format.to_i] }  do
     uint16 0  # hex, bin, dec
-    string 1, read_length: 0
-    string 2, read_length: lambda { value_format - 0x80 } 
+    string 1, read_length: 0  # ASCII character
+    string 2, read_length: lambda { value_format - 0x80 } # symbol
   end
+
   def decode
-    type = @@formats[value_format]
+    type = @@formats[value_format.to_i]
     case type
     when 0
-      case value_format
+      case value_format.to_i
         when 1
           val.to_i.to_s(16) + 'H'
         when 2
@@ -48,9 +48,11 @@ class ExpressionTerm < BaseRecord
           raise "Unknown ExpressionTerm format=#{value_format}"
       end
     when 1
-      value_format.chr
+      value_format.chr  # ASCII char
     when 2
-      val
+      val  # symbol
+    else
+      raise "Unknown ExpressionTerm type=#{type}"
     end
   end
 end
@@ -60,9 +62,9 @@ class RowSymbol < BaseRecord
   string :symbol, read_length: lambda { sym_len - 0x80 }
   uint8 :assign_sign
   virtual assert: lambda { assign_sign == '='.ord }
-  def decode
-    "#{symbol}=#{val.decode}"
-  end
+#  def decode
+#    "#{symbol}=#{val.decode}"
+#  end
 end
 
 class Row < BaseRecord
@@ -75,8 +77,13 @@ class Row < BaseRecord
 end
 
 def parse(klass, str)
+  raise "Empty string for parsing #{klass}" if str.empty?
+  xx = (0...str.size).map {|i| str[i].ord.to_s(16)}
+  #puts "BEFORE klass=#{klass}  r: [#{xx.join(' ')}] }"  
   record = klass.read str
+  #puts "MIDDLE klass=#{klass} num_bytes=#{record.num_bytes}  r: '#{str}'"
   str.slice!(0, record.num_bytes)
+  #puts "AFTER klass=#{klass} r: '#{str}'"
   record
 end
 
@@ -88,8 +95,13 @@ def expression(r)
       r = ''
       break
     end
-    term = parse(ExpressionTerm, r)
-    out += term.decode
+    if r[0] == "'"
+      i = r.index("'", 1)
+      out += r.slice!(0, i+1)
+    else
+      term = parse(ExpressionTerm, r)
+      out += term.decode
+    end
   end
   [out, comment]
 end
@@ -155,9 +167,9 @@ templates = {  # instructions
   0xDD98 => "CP\t{{arg1}}\t{{comment}}",
 
 
-  0xE0F4 => "JR\t{{arg1}},\t{{arg2}}\t{{comment}}",
+  0xE0F4 => "JR\t{{arg1}},{{arg2}}\t{{comment}}",
   0xE0CC => "JR\t{{arg1}}\t{{comment}}",
-  0xE0EA => "JR\t{{arg1}},\t{{arg2}}\t{{comment}}",
+  0xE0EA => "JR\t{{arg1}},{{arg2}}\t{{comment}}",
 
   0xE126 => "CALL\t{{symbol}}\t{{comment}}",
   0xE13A => "RET\t{{comment}}",
@@ -191,11 +203,11 @@ misc_templates = {
   0xE1E6 => "PUT\t{{expr}}\t{{comment}}",
   0xE1E4 => "ORG\t{{expr}}\t{{comment}}",
   0xE1EB => "{{expr}}:\t{{comment}}", # label
-  0xE1E8 => "DEFW\t{{expr}}\t{{comment}}",
-  0xE1E7 => "DEFB\t{{expr}}\t{{comment}}",
-  0xE1EA => "DEFS\t{{expr}}\t{{comment}}",
+  0xE1E8 => "DEFW\t{{{expr}}}\t{{comment}}",
+  0xE1E7 => "DEFB\t{{{expr}}}\t{{comment}}",
+  0xE1EA => "DEFS\t{{{expr}}}\t{{comment}}",
   
-  #0xE1E9 => "DEFM\t{{expr}}\t{{comment}}"
+  0xE1E9 => "DEFM\t{{{expr}}}\t{{comment}}"
 
 }
 
@@ -237,10 +249,11 @@ File.open(source_file, 'r') do |mzf|
       puts r
     when 0xE1EC  # symbol definition
       sym = parse(RowSymbol, r)
+p sym      
       expr, comment = expression(r)
       puts "#{sym.symbol}=#{expr}\t#{comment}"
-    when 0xE1E9  # DEFM
-      puts "DEFM\t#{r}"
+#    when 0xE1E9  # DEFM
+#      puts "DEFM\t#{r}"
 
     when  0xe0cc
       inst = parse(RowInstr, r)
