@@ -208,6 +208,17 @@ templates = {  # instructions
   0xDC8A => "SUB\t{{arg1}}\t{{{comment}}}",
 
   0xDA00 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDAD2 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDA0A => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDA32 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDA96 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDA78 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDAA0 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDA14 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDA82 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDAF0 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDA50 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+
   0xDB18 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
 
 
@@ -237,7 +248,7 @@ File.open(source_file, 'r') do |mzf|
     r = String(row.line)
 
     row_code = row.row_type.to_i
-    row_code = 0xDA00 if row_code & 0xFF00 == 0xDA00   # several LDs
+#    row_code = 0xDA00 if row_code & 0xFF00 == 0xDA00   # several LDs
 
     if templates.key? row_code
       inst = RowInstr.parse_instr(row, r)
