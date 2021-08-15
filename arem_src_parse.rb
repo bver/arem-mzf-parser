@@ -22,7 +22,7 @@ class MzfHeader < BaseRecord
 end
 
 class ExpressionTerm < BaseRecord
-  @@formats = { 0x01 => 0, 0x02 => 0, 0x03 => 0 }
+  @@formats = { 0x01 => 0, 0x02 => 0, 0x03 => 0, 0x04 => 3 }
   ((' '.ord)..('_'.ord)).each { |ch| @@formats[ch] = 1 } # add ASCII
   (0x80 .. 0xFF).each { |ch| @@formats[ch] = 2 } # symbols
 
@@ -31,6 +31,7 @@ class ExpressionTerm < BaseRecord
     uint16 0  # hex, bin, dec
     string 1, read_length: 0  # ASCII character
     string 2, read_length: lambda { value_format - 0x80 } # symbol
+    string 3, read_length: 1  # prefixed ASCII character
   end
 
   def decode
@@ -51,6 +52,8 @@ class ExpressionTerm < BaseRecord
       value_format.chr  # ASCII char
     when 2
       val  # symbol
+    when 3
+      "'#{val}'"
     else
       raise "Unknown ExpressionTerm type=#{type}"
     end
@@ -78,12 +81,12 @@ end
 
 def parse(klass, str)
   raise "Empty string for parsing #{klass}" if str.empty?
-  xx = (0...str.size).map {|i| str[i].ord.to_s(16)}
-  #puts "BEFORE klass=#{klass}  r: [#{xx.join(' ')}] }"  
+#  xx = (0...str.size).map {|i| str[i].ord.to_s(16)}
+#  puts "BEFORE klass=#{klass}  r: [#{xx.join(' ')}] }"  
   record = klass.read str
-  #puts "MIDDLE klass=#{klass} num_bytes=#{record.num_bytes}  r: '#{str}'"
+#  puts "MIDDLE klass=#{klass} num_bytes=#{record.num_bytes}  r: '#{str}'"
   str.slice!(0, record.num_bytes)
-  #puts "AFTER klass=#{klass} r: '#{str}'"
+#  puts "AFTER klass=#{klass} r: '#{str}'"
   record
 end
 
@@ -112,8 +115,8 @@ class RowInstr < BaseRecord
   @@reg = {
             0 => '', 
             1 => 'B', 2 => 'C', 3 => 'D', 4 => 'E',5 => 'H', 6 => 'L', 7 => 'A',
-            8 => 'BC', 9 => 'DE', 0xA => 'HL',
-            0x10 => 'NZ', 0x11 => 'Z', 0x12 => 'NC',
+            8 => 'BC', 9 => 'DE', 0xA => 'HL', 0xE => 'AF',
+            0x10 => 'NZ', 0x11 => 'Z', 0x12 => 'NC', 0x13 => 'C',
             0x18 => '(HL)', 0x1A => '(DE)', 0x1C => '(C)',
             0x27 => :symbol, 0x28 => :symbol_indirect,
           }
@@ -158,65 +161,76 @@ class RowInstr < BaseRecord
 end
 
 templates = {  # instructions
-  0xE0B8 => "JP\t{{symbol}}\t{{comment}}",
-  0xE11C => "DJNZ\t{{symbol}}\t{{comment}}",
+  0xE0B8 => "JP\t{{symbol}}\t{{{comment}}}",
+  0xE11C => "DJNZ\t{{symbol}}\t{{{comment}}}",
 
-  0xDE10 => "CPL",  
-  0xDD84 => "CP\t{{arg1}}\t{{comment}}",
-  0xDD8E => "CP\t{{arg1}}\t{{comment}}",
-  0xDD98 => "CP\t{{arg1}}\t{{comment}}",
+  0xDE10 => "CPL\t{{{comment}}}",
+  0xDB9A => "EX\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDE2E => "SCF\t{{{comment}}}",
+  0xDFB4 => "SLA\t{{arg1}}\t{{{comment}}}",
 
+  0xDD84 => "CP\t{{arg1}}\t{{{comment}}}",
+  0xDD8E => "CP\t{{arg1}}\t{{{comment}}}",
+  0xDD98 => "CP\t{{arg1}}\t{{{comment}}}",
 
-  0xE0F4 => "JR\t{{arg1}},{{arg2}}\t{{comment}}",
-  0xE0CC => "JR\t{{arg1}}\t{{comment}}",
-  0xE0EA => "JR\t{{arg1}},{{arg2}}\t{{comment}}",
-  0xE0E0 => "JR\t{{arg1}},{{arg2}}\t{{comment}}",
+  0xE0CC => "JR\t{{arg1}}\t{{{comment}}}",
 
-  0xE126 => "CALL\t{{symbol}}\t{{comment}}",
-  0xE13A => "RET\t{{comment}}",
-  0xE144 => "RET\t{{arg1}}\t{{comment}}",
-  0xDE42 => "HALT\t{{comment}}",
-  0xDE38 => "NOP\t{{comment}}",
+  0xE0D6 => "JR\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xE0F4 => "JR\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xE0EA => "JR\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xE0E0 => "JR\t{{arg1}},{{arg2}}\t{{{comment}}}",
 
-  0xDB5E => "PUSH\t{{arg1}}\t{{comment}}",
-  0xDB7C => "POP\t{{arg1}}\t{{comment}}",
+  0xE126 => "CALL\t{{symbol}}\t{{{comment}}}",
+  0xE13A => "RET\t{{{comment}}}",
+  0xE144 => "RET\t{{arg1}}\t{{{comment}}}",
+  0xDE42 => "HALT\t{{{comment}}}",
+  0xDE38 => "NOP\t{{{comment}}}",
+
+  0xDB5E => "PUSH\t{{arg1}}\t{{{comment}}}",
+  0xDB7C => "POP\t{{arg1}}\t{{{comment}}}",
   
-  0xDDB6 => "INC\t{{arg1}}\t{{comment}}",
-  0xDEB0 => "INC\t{{arg1}}\t{{comment}}",
+  0xDDB6 => "INC\t{{arg1}}\t{{{comment}}}",
+  0xDEB0 => "INC\t{{arg1}}\t{{{comment}}}",
 
-  0xDDDE => "DEC\t{{arg1}}\t{{comment}}",
-  0xDECE => "DEC\t{{arg1}}\t{{comment}}",
+  0xDDDE => "DEC\t{{arg1}}\t{{{comment}}}",
+  0xDECE => "DEC\t{{arg1}}\t{{{comment}}}",
+  
+  0xDF64 => "RRC\t{{arg1}}\t{{{comment}}}",
+  0xDF14 => "RLC\t{{arg1}}\t{{{comment}}}",
+  0xDCF8 => "AND\t{{arg1}}\t{{{comment}}}",
+  0xDD20 => "OR\t{{arg1}}\t{{{comment}}}",
+  0xDD52 => "XOR\t{{arg1}}\t{{{comment}}}",
+  0xE040 => "BIT\t{{arg1}},{{arg2}}\t{{{comment}}}",
 
-  0xDC26 => "ADD\t{{arg1}},{{arg2}}\t{{comment}}",
-  0xDC30 => "ADD\t{{arg1}},{{arg2}}\t{{comment}}",
+  0xDC26 => "ADD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDC30 => "ADD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDE7E => "ADD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDC8A => "SUB\t{{arg1}}\t{{{comment}}}",
 
-  0xDD52 => "XOR\t{{arg1}}\t{{comment}}",
-
-  0xDA00 => "LD\t{{arg1}},{{arg2}}\t{{comment}}",
-  0xDB18 => "LD\t{{arg1}},{{arg2}}\t{{comment}}",
+  0xDA00 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDB18 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
 
 
-  0xE1A8 => "OUT\t{{arg1}},{{arg2}}\t{{comment}}",
-  0xE1B2 => "OUT\t{{arg1}},{{arg2}}\t{{comment}}",
-  0xE16C => "IN\t{{arg1}},{{arg2}}\t{{comment}}"
+  0xE1A8 => "OUT\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xE1B2 => "OUT\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xE16C => "IN\t{{arg1}},{{arg2}}\t{{{comment}}}"
 
 }
 
 misc_templates = {
-  0xE1E6 => "PUT\t{{expr}}\t{{comment}}",
-  0xE1E4 => "ORG\t{{expr}}\t{{comment}}",
-  0xE1EB => "{{expr}}:\t{{comment}}", # label
-  0xE1E8 => "DEFW\t{{{expr}}}\t{{comment}}",
-  0xE1E7 => "DEFB\t{{{expr}}}\t{{comment}}",
-  0xE1EA => "DEFS\t{{{expr}}}\t{{comment}}",
-  
-  0xE1E9 => "DEFM\t{{{expr}}}\t{{comment}}"
+  0xE1E6 => "PUT\t{{expr}}\t{{{comment}}}",
+  0xE1E4 => "ORG\t{{expr}}\t{{{comment}}}",
+  0xE1EB => "{{expr}}:\t{{{comment}}}", # label
+  0xE1E8 => "DEFW\t{{{expr}}}\t{{{comment}}}",
+  0xE1E7 => "DEFB\t{{{expr}}}\t{{{comment}}}",
+  0xE1EA => "DEFS\t{{{expr}}}\t{{{comment}}}",
+  0xE1E9 => "DEFM\t{{{expr}}}\t{{{comment}}}"
 
 }
 
 File.open(source_file, 'r') do |mzf|
   h = MzfHeader.read mzf
-  puts "type=#{h.ftype.to_i.to_s(16)}h size=#{h.fsize} name: #{h.name}"
+  #puts "type=#{h.ftype.to_i.to_s(16)}h size=#{h.fsize} name: #{h.name}"
   
   until mzf.eof?
     row = Row.read mzf    
@@ -252,13 +266,13 @@ File.open(source_file, 'r') do |mzf|
       puts r
     when 0xE1EC  # symbol definition
       sym = parse(RowSymbol, r)
-p sym      
+#p sym      
       expr, comment = expression(r)
       puts "#{sym.symbol}=#{expr}\t#{comment}"
 #    when 0xE1E9  # DEFM
 #      puts "DEFM\t#{r}"
 
-    when  0xe0e0
+    when  0xde2e
       inst = parse(RowInstr, r)
       print "UNKNOWN INSTRUCTION data #{inst.decode(row.row_type)}  size #{row.instr_size}  "
       puts row.instr_size > 1 ? expression(r) : ''
