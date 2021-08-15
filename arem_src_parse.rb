@@ -23,7 +23,7 @@ end
 
 class ExpressionTerm < BaseRecord
   @@formats = { 1 => 0, 2 => 0, 3 => 0, 
-                '+'.ord => 1, '-'.ord => 1, '*'.ord => 1, '/'.ord => 1 }
+                '+'.ord => 1, '-'.ord => 1, '*'.ord => 1, '/'.ord => 1, ','.ord => 1 }
   @@formats.default = 2
   uint8 :value_format
   choice :val, selection: lambda { @@formats[value_format] }  do
@@ -185,7 +185,7 @@ misc_templates = {
   0xE1E4 => "ORG\t{{expr}}\t{{comment}}",
   0xE1EB => "{{expr}}:\t{{comment}}", # label
   0xE1E8 => "DEFW\t{{expr}}\t{{comment}}",
-  #0xE1E7 => "DEFB\t{{expr}}\t{{comment}}",
+  0xE1E7 => "DEFB\t{{expr}}\t{{comment}}",
   0xE1EA => "DEFS\t{{expr}}\t{{comment}}"
 }
 
@@ -231,9 +231,6 @@ File.open(source_file, 'r') do |mzf|
       puts "#{sym.symbol}=#{expr}\t#{comment}"
     when 0xE1E9  # DEFM
       puts "DEFM\t#{r}"
-    when 0xE1E7  # DEFB
-      expr, comment = expression(r)
-      puts "DEFB\t#{expr}\t#{comment}"
 
     when  0xe0cc
       inst = parse(RowInstr, r)
