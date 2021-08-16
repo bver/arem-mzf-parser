@@ -246,6 +246,7 @@ templates = {  # instructions
   0xDBF4 => "LDDR\t{{{comment}}}",
   0xDBE0 => "LDIR\t{{{comment}}}",
   0xDE06 => "DAA\t{{{comment}}}",
+  0xDE4C => "DI\t{{{comment}}}",
 
   0xDC08 => "CPIR\t{{{comment}}}",
   0xDBFE => "CPI\t{{{comment}}}",
