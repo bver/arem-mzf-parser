@@ -22,7 +22,7 @@ class MzfHeader < BaseRecord
 end
 
 class ExpressionTerm < BaseRecord
-  @@formats = { 0x01 => 0, 0x02 => 0, 0x03 => 0, 0x04 => 3 }
+  @@formats = { 0x01 => 0, 0x02 => 0, 0x03 => 0, 0x04 => 3, 0x05 => 4 }
   ((' '.ord)..('_'.ord)).each { |ch| @@formats[ch] = 1 } # add ASCII
   (0x80 .. 0xFF).each { |ch| @@formats[ch] = 2 } # symbols
 
@@ -32,6 +32,7 @@ class ExpressionTerm < BaseRecord
     string 1, read_length: 0  # ASCII character
     string 2, read_length: lambda { value_format - 0x80 } # symbol
     string 3, read_length: 1  # prefixed ASCII character
+    string 4, read_length: 1  # prefixed VIDEO character
   end
 
   def decode
@@ -54,6 +55,8 @@ class ExpressionTerm < BaseRecord
       val  # symbol
     when 3
       "'#{val}'"
+    when 4
+      "V'#{val}'"      
     else
       raise "Unknown ExpressionTerm type=#{type}"
     end
@@ -118,7 +121,7 @@ class RowInstr < BaseRecord
             8 => 'BC', 9 => 'DE', 0xA => 'HL', 0xB => 'SP', 0xC => 'IX', 0xD => 'IY', 0xE => 'AF', 0xF => "AF'",
             0x10 => 'NZ', 0x11 => 'Z', 0x12 => 'NC', 0x13 => 'C', 0x14 => 'PO', 0x15 => 'PE', 0x16 => 'P', 0x17 => 'M',
             0x18 => '(HL)', 0x19 => '(BC)', 0x1A => '(DE)', 0x1B => '(SP)', 0x1C => '(C)', 0x1D => '(IX)', 0x1E => '(IY)',
-            0x27 => :symbol, 0x28 => :symbol_indirect,
+            0x27 => :symbol, 0x28 => :symbol_indirect, 0x29 => :symbol_ind_ix
           }
 
   attr_accessor :symbol, :comment
@@ -138,6 +141,8 @@ class RowInstr < BaseRecord
       @symbol
     when :symbol_indirect
       "(#{@symbol})"
+    when :symbol_ind_ix
+      "(IX#{@symbol})"
     else
       arg
     end
@@ -172,6 +177,7 @@ templates = {  # instructions
   0xDD84 => "CP\t{{arg1}}\t{{{comment}}}",
   0xDD8E => "CP\t{{arg1}}\t{{{comment}}}",
   0xDD98 => "CP\t{{arg1}}\t{{{comment}}}",
+  0xDDA2 => "CP\t{{arg1}}\t{{{comment}}}",
 
   0xE0CC => "JR\t{{arg1}}\t{{{comment}}}",
 
@@ -201,11 +207,13 @@ templates = {  # instructions
   0xDD20 => "OR\t{{arg1}}\t{{{comment}}}",
   0xDD52 => "XOR\t{{arg1}}\t{{{comment}}}",
   0xE040 => "BIT\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xE162 => "RST\t{{arg1}}\t{{{comment}}}",
 
   0xDC26 => "ADD\t{{arg1}},{{arg2}}\t{{{comment}}}",
   0xDC30 => "ADD\t{{arg1}},{{arg2}}\t{{{comment}}}",
   0xDE7E => "ADD\t{{arg1}},{{arg2}}\t{{{comment}}}",
   0xDC8A => "SUB\t{{arg1}}\t{{{comment}}}",
+  0xDE92 => "SBC\t{{arg1}},{{arg2}}\t{{{comment}}}",
 
   0xDA00 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
   0xDAD2 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
@@ -218,9 +226,22 @@ templates = {  # instructions
   0xDA82 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
   0xDAF0 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
   0xDA50 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDA6E => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDAFA => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDADC => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDA1E => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDA3C => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDA5A => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
 
   0xDB18 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
+  0xDB22 => "LD\t{{arg1}},{{arg2}}\t{{{comment}}}",
 
+  0xDBD6 => "LDI\t{{{comment}}}",
+  0xDBF4 => "LDDR\t{{{comment}}}",
+
+  0xDC08 => "CPIR\t{{{comment}}}",
+  0xDBFE => "CPI\t{{{comment}}}",
+  0xDC1C => "CPDR\t{{{comment}}}",
 
   0xE1A8 => "OUT\t{{arg1}},{{arg2}}\t{{{comment}}}",
   0xE1B2 => "OUT\t{{arg1}},{{arg2}}\t{{{comment}}}",
@@ -283,7 +304,7 @@ File.open(source_file, 'r') do |mzf|
 #    when 0xE1E9  # DEFM
 #      puts "DEFM\t#{r}"
 
-    when  0xde2e
+    when  0xDA1E
       inst = parse(RowInstr, r)
       print "UNKNOWN INSTRUCTION data #{inst.decode(row.row_type)}  size #{row.instr_size}  "
       puts row.instr_size > 1 ? expression(r) : ''
