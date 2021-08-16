@@ -169,6 +169,7 @@ templates = {  # instructions
   0xE0B8 => "JP\t{{symbol}}\t{{{comment}}}",
   0xE11C => "DJNZ\t{{symbol}}\t{{{comment}}}",
   0xE0C2 => "JP\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
+  0xE0FE => "JP\t{{{arg1}}}\t{{{comment}}}",
 
   0xDE10 => "CPL\t{{{comment}}}",
   0xDB9A => "EX\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
