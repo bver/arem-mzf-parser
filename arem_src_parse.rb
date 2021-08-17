@@ -132,28 +132,30 @@ class RowInstr < BaseRecord
     object
   end
 
-  def arg b
+  def arg(b, symbol)
     raise "Unknown argument code #{b.to_i.to_s(16)}" unless @@reg.key? b
     arg = @@reg[b]
-    (arg == 'symbol') ? @symbol : arg
+    (arg == 'symbol') ? symbol : arg
     case arg
     when :symbol
-      @symbol
+      symbol
     when :symbol_indirect
-      "(#{@symbol})"
+      "(#{symbol})"
     when :symbol_ind_ix
-      "(IX#{@symbol})"
+      "(IX#{symbol})"
     else
       arg
     end
   end
 
   def arg1
-    arg(data.to_i & 0x00FF)
+    symbol = @symbol.split(',').first
+    arg(data.to_i & 0x00FF, symbol)
   end
   
   def arg2
-    arg((data.to_i & 0xFF00) >> 8)
+    symbol = @symbol.split(',').last
+    arg((data.to_i & 0xFF00) >> 8, symbol)
   end
 
   def decode(data1)
