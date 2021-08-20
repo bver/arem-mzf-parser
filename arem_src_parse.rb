@@ -167,6 +167,87 @@ class RowInstr < BaseRecord
   end
 end
 
+instructions = {
+  44 => 'EXX',
+  48 => 'LDI',
+  49 =>	'LDIR',
+  50 => 'LDD',	
+  51 => 'LDDR',
+  52 => 'CPI',
+  53 =>	'CPIR',
+  54 => 'CPD',
+  55 =>	'CPDR',
+  104 => 'DAA',
+  105 => 'CPL',
+  106 => 'NEG',
+  107 => 'CCF',
+  108 => 'SCF',
+  109 => 'NOP',
+  110 => 'HALT',
+  111 => 'DI',
+  112 => 'EI',
+  113 => 'IM0',
+  114 => 'IM1',
+  115 => 'IM2',
+  116 => 'ADD',
+  117 => 'ADC',
+  118 => 'SBC',
+  127 => 'RLCA',
+  128 => 'RLA',
+  129 => 'RRCA',
+  130 => 'RRA',
+  159 => 'RLD',
+  160 => 'RRD',
+  183 => 'DJNZ',
+  188 => 'RETI',
+  189 => 'RETN',
+  190 => 'RST',
+  193 => 'INI',
+  194 => 'INIR',
+  195 => 'IND',
+  196 => 'INDR',
+  199 => 'OUTI',
+  200 => 'OTIR',
+  201 => 'OUTD',
+  202 => 'OTDR'
+}
+
+(1..35).each {|k| instructions[k] = 'LD' }     #       35
+(36..38).each {|k| instructions[k] = 'PUSH' }  #	3
+(39..41).each {|k| instructions[k] = 'POP' }   #	3
+(42..43).each {|k| instructions[k] = 'EX' }    #	2
+(45..47).each {|k| instructions[k] = 'EX' }    #	3
+(56..60).each {|k| instructions[k] = 'ADD' }   #	5
+(61..65).each {|k| instructions[k] = 'ADC' }   #	5
+(66..70).each {|k| instructions[k] = 'SUB' }   #	5
+(71..75).each {|k| instructions[k] = 'SBC' }   #	5
+(76..80).each {|k| instructions[k] = 'AND' }   #	5
+(81..85).each {|k| instructions[k] = 'OR' }    #	5
+(86..90).each {|k| instructions[k] = 'XOR' }   #	5
+(91..95).each {|k| instructions[k] = 'CP' }    #	5
+(96..99).each {|k| instructions[k] = 'INC' }   #	4
+(100..103).each {|k| instructions[k] = 'DEC' } #	4
+(119..120).each {|k| instructions[k] = 'ADD' } #	2
+(121..123).each {|k| instructions[k] = 'INC' } #	3
+(124..126).each {|k| instructions[k] = 'DEC' } #	3
+(131..134).each {|k| instructions[k] = 'RLC' } #	4
+(135..138).each {|k| instructions[k] = 'RL' }  #	4
+(139..142).each {|k| instructions[k] = 'RRC' } #	4
+(143..146).each {|k| instructions[k] = 'RR' }  #	4
+(147..150).each {|k| instructions[k] = 'SLA' } #	4
+(151..154).each {|k| instructions[k] = 'SRA' } #	4
+(155..158).each {|k| instructions[k] = 'SRL' } #	4
+(161..164).each {|k| instructions[k] = 'BIT' } #	4
+(165..168).each {|k| instructions[k] = 'SET' } #	4
+(169..172).each {|k| instructions[k] = 'RES' } #	4
+(173..174).each {|k| instructions[k] = 'JP' }  #	2
+(175..179).each {|k| instructions[k] = 'JR' }  #	5
+(180..182).each {|k| instructions[k] = 'JP' }  #	3
+(184..185).each {|k| instructions[k] = 'CALL' }#	2
+(186..187).each {|k| instructions[k] = 'RET' } #	2
+(191..192).each {|k| instructions[k] = 'IN' }  #	2
+(197..198).each {|k| instructions[k] = 'OUT' } #	2
+
 templates = {  # instructions
   0xE0B8 => "JP",
   0xE11C => "DJNZ",
@@ -283,9 +364,13 @@ File.open(source_file, 'r') do |mzf|
     row_code = row.row_type.to_i
 #    row_code = 0xDA00 if row_code & 0xFF00 == 0xDA00   # several LDs
 
-    if templates.key? row_code
+    instr_key = ((row_code - 0xDA00) / 10) + 1
+    if instructions.key? instr_key
+
+    #if templates.key? 
       inst = RowInstr.parse_instr(row, r)
-      line = templates[row_code]
+      #line = templates[row_code]
+      line = instructions[instr_key]
       line += "\t#{inst.arg1}" unless inst.arg1.empty?
       line += ",#{inst.arg2}" unless inst.arg2.empty?
       line += "\t#{inst.comment}" unless inst.comment.empty?
