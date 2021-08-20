@@ -168,96 +168,96 @@ class RowInstr < BaseRecord
 end
 
 templates = {  # instructions
-  0xE0B8 => "JP\t{{symbol}}\t{{{comment}}}",
-  0xE11C => "DJNZ\t{{symbol}}\t{{{comment}}}",
-  0xE0C2 => "JP\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xE0FE => "JP\t{{{arg1}}}\t{{{comment}}}",
+  0xE0B8 => "JP",
+  0xE11C => "DJNZ",
+  0xE0C2 => "JP",
+  0xE0FE => "JP",
 
-  0xDE10 => "CPL\t{{{comment}}}",
-  0xDB9A => "EX\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDE2E => "SCF\t{{{comment}}}",
-  0xDFB4 => "SLA\t{{{arg1}}}\t{{{comment}}}",
+  0xDE10 => "CPL",
+  0xDB9A => "EX",
+  0xDE2E => "SCF",
+  0xDFB4 => "SLA",
 
-  0xDD84 => "CP\t{{{arg1}}}\t{{{comment}}}",
-  0xDD8E => "CP\t{{{arg1}}}\t{{{comment}}}",
-  0xDD98 => "CP\t{{{arg1}}}\t{{{comment}}}",
-  0xDDA2 => "CP\t{{{arg1}}}\t{{{comment}}}",
+  0xDD84 => "CP",
+  0xDD8E => "CP",
+  0xDD98 => "CP",
+  0xDDA2 => "CP",
 
-  0xE0CC => "JR\t{{{arg1}}}\t{{{comment}}}",
+  0xE0CC => "JR",
 
-  0xE0D6 => "JR\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xE0F4 => "JR\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xE0EA => "JR\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xE0E0 => "JR\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
+  0xE0D6 => "JR",
+  0xE0F4 => "JR",
+  0xE0EA => "JR",
+  0xE0E0 => "JR",
 
-  0xE126 => "CALL\t{{symbol}}\t{{{comment}}}",
-  0xE13A => "RET\t{{{comment}}}",
-  0xE144 => "RET\t{{{arg1}}}\t{{{comment}}}",
-  0xDE42 => "HALT\t{{{comment}}}",
-  0xDE38 => "NOP\t{{{comment}}}",
+  0xE126 => "CALL",
+  0xE13A => "RET",
+  0xE144 => "RET",
+  0xDE42 => "HALT",
+  0xDE38 => "NOP",
 
-  0xDB5E => "PUSH\t{{{arg1}}}\t{{{comment}}}",
-  0xDB7C => "POP\t{{{arg1}}}\t{{{comment}}}",
+  0xDB5E => "PUSH",
+  0xDB7C => "POP",
   
-  0xDDB6 => "INC\t{{{arg1}}}\t{{{comment}}}",
-  0xDEB0 => "INC\t{{{arg1}}}\t{{{comment}}}",
+  0xDDB6 => "INC",
+  0xDEB0 => "INC",
 
-  0xDDDE => "DEC\t{{{arg1}}}\t{{{comment}}}",
-  0xDECE => "DEC\t{{{arg1}}}\t{{{comment}}}",
+  0xDDDE => "DEC",
+  0xDECE => "DEC",
   
-  0xDF64 => "RRC\t{{{arg1}}}\t{{{comment}}}",
-  0xDF14 => "RLC\t{{{arg1}}}\t{{{comment}}}",
-  0xDCF8 => "AND\t{{{arg1}}}\t{{{comment}}}",
-  0xDD20 => "OR\t{{{arg1}}}\t{{{comment}}}",
-  0xDD52 => "XOR\t{{{arg1}}}\t{{{comment}}}",
-  0xE040 => "BIT\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xE162 => "RST\t{{{arg1}}}\t{{{comment}}}",
-  0xE004 => "SRL\t{{{arg1}}}\t{{{comment}}}",
-  0xDF8C => "RR\t{{{arg1}}}\t{{{comment}}}",
+  0xDF64 => "RRC",
+  0xDF14 => "RLC",
+  0xDCF8 => "AND",
+  0xDD20 => "OR",
+  0xDD52 => "XOR",
+  0xE040 => "BIT",
+  0xE162 => "RST",
+  0xE004 => "SRL",
+  0xDF8C => "RR",
 
-  0xDC26 => "ADD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDC30 => "ADD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDE7E => "ADD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDC8A => "SUB\t{{{arg1}}}\t{{{comment}}}",
-  0xDE92 => "SBC\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDC6C => "ADC\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
+  0xDC26 => "ADD",
+  0xDC30 => "ADD",
+  0xDE7E => "ADD",
+  0xDC8A => "SUB",
+  0xDE92 => "SBC",
+  0xDC6C => "ADC",
 
 
-  0xDA00 => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDAD2 => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDA0A => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDA32 => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDA96 => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDA78 => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDAA0 => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDA14 => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDA82 => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDAF0 => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDA50 => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDA6E => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDAFA => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDADC => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDA1E => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDA3C => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDA5A => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDA8C => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
+  0xDA00 => "LD",
+  0xDAD2 => "LD",
+  0xDA0A => "LD",
+  0xDA32 => "LD",
+  0xDA96 => "LD",
+  0xDA78 => "LD",
+  0xDAA0 => "LD",
+  0xDA14 => "LD",
+  0xDA82 => "LD",
+  0xDAF0 => "LD",
+  0xDA50 => "LD",
+  0xDA6E => "LD",
+  0xDAFA => "LD",
+  0xDADC => "LD",
+  0xDA1E => "LD",
+  0xDA3C => "LD",
+  0xDA5A => "LD",
+  0xDA8C => "LD",
 
-  0xDB18 => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xDB22 => "LD\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
+  0xDB18 => "LD",
+  0xDB22 => "LD",
 
-  0xDBD6 => "LDI\t{{{comment}}}",
-  0xDBF4 => "LDDR\t{{{comment}}}",
-  0xDBE0 => "LDIR\t{{{comment}}}",
-  0xDE06 => "DAA\t{{{comment}}}",
-  0xDE4C => "DI\t{{{comment}}}",
+  0xDBD6 => "LDI",
+  0xDBF4 => "LDDR",
+  0xDBE0 => "LDIR",
+  0xDE06 => "DAA",
+  0xDE4C => "DI",
 
-  0xDC08 => "CPIR\t{{{comment}}}",
-  0xDBFE => "CPI\t{{{comment}}}",
-  0xDC1C => "CPDR\t{{{comment}}}",
+  0xDC08 => "CPIR",
+  0xDBFE => "CPI",
+  0xDC1C => "CPDR",
 
-  0xE1A8 => "OUT\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xE1B2 => "OUT\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}",
-  0xE16C => "IN\t{{{arg1}}},{{{arg2}}}\t{{{comment}}}"
+  0xE1A8 => "OUT",
+  0xE1B2 => "OUT",
+  0xE16C => "IN"
 
 }
 
@@ -285,13 +285,11 @@ File.open(source_file, 'r') do |mzf|
 
     if templates.key? row_code
       inst = RowInstr.parse_instr(row, r)
-      line = Mustache.new
-      line[:arg1] = inst.arg1
-      line[:arg2] = inst.arg2
-      line[:symbol] = inst.symbol
-      line[:comment] = inst.comment
-      line.template = templates[row_code]
-      puts line.render
+      line = templates[row_code]
+      line += "\t#{inst.arg1}" unless inst.arg1.empty?
+      line += ",#{inst.arg2}" unless inst.arg2.empty?
+      line += "\t#{inst.comment}" unless inst.comment.empty?
+      puts line
       next
     end
 
@@ -310,11 +308,8 @@ File.open(source_file, 'r') do |mzf|
       puts r
     when 0xE1EC  # symbol definition
       sym = parse(RowSymbol, r)
-#p sym      
       expr, comment = expression(r)
       puts "#{sym.symbol}=#{expr}\t#{comment}"
-#    when 0xE1E9  # DEFM
-#      puts "DEFM\t#{r}"
 
     when  0xDA1E
       inst = parse(RowInstr, r)
