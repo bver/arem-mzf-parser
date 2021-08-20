@@ -254,7 +254,8 @@ templates = {
 File.open(source_file, 'r') do |mzf|
   h = MzfHeader.read mzf
   #puts "type=#{h.ftype.to_i.to_s(16)}h size=#{h.fsize} name: #{h.name}"
-  
+  raise "File type #{h.ftype.to_i.to_s(16)}H not supported" unless h.ftype == 0x41
+
   until mzf.eof?
     row = Row.read mzf    
     r = String(row.line)
@@ -293,10 +294,10 @@ File.open(source_file, 'r') do |mzf|
       expr, comment = expression(r)
       puts "#{sym.symbol}=#{expr}\t#{comment}"
 
-    when  0xDA1E
-      inst = parse(RowInstr, r)
-      print "UNKNOWN INSTRUCTION data #{inst.decode(row.row_type)}  size #{row.instr_size}  "
-      puts row.instr_size > 1 ? expression(r) : ''
+#    when  0xDA1E
+#      inst = parse(RowInstr, r)
+#      print "UNKNOWN INSTRUCTION data #{inst.decode(row.row_type)}  size #{row.instr_size}  "
+#      puts row.instr_size > 1 ? expression(r) : ''
 
     else
       raise "Unknown row type= 0x#{row.row_type.to_i.to_s(16)}"  
