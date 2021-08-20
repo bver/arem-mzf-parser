@@ -1,7 +1,7 @@
 #!/bin/env ruby
 
 require 'bindata'
-require 'mustache'
+#require 'mustache'
 
 abort "Usage:\n #$0 source.arem.mzf" unless ARGV.size == 1
 source_file = ARGV.first
@@ -242,13 +242,12 @@ instructions = {
 (197..198).each {|k| instructions[k] = 'OUT' } #	2
 
 templates = {
-  0xE1E6 => "PUT\t{{expr}}\t{{{comment}}}",
-  0xE1E4 => "ORG\t{{expr}}\t{{{comment}}}",
-  0xE1EB => "{{expr}}:\t{{{comment}}}", # label
-  0xE1E8 => "DEFW\t{{{expr}}}\t{{{comment}}}",
-  0xE1E7 => "DEFB\t{{{expr}}}\t{{{comment}}}",
-  0xE1EA => "DEFS\t{{{expr}}}\t{{{comment}}}",
-  0xE1E9 => "DEFM\t{{{expr}}}\t{{{comment}}}"
+  0xE1E6 => 'PUT',
+  0xE1E4 => 'ORG',
+  0xE1E8 => 'DEFW',
+  0xE1E7 => 'DEFB',
+  0xE1EA => 'DEFS',
+  0xE1E9 => 'DEFM'
 }
 
 File.open(source_file, 'r') do |mzf|
@@ -274,15 +273,23 @@ File.open(source_file, 'r') do |mzf|
 
     if templates.key? row_code
       expr, comment = expression(r)
-      line = Mustache.new
-      line[:expr] = expr 
-      line[:comment] = comment
-      line.template = templates[row_code]
-      puts line.render
+#      line = Mustache.new
+#      line[:expr] = expr 
+#      line[:comment] = comment
+#      line.template = templates[row_code]
+#      puts line.render
+      line = templates[row_code] + "\t#{expr}"
+      line += "\t#{comment}" unless comment.empty?
+      puts line
       next
     end
 
     case row.row_type
+    when 0xE1EB  # label
+      expr, comment = expression(r)
+      line = expr + ':'
+      line += "\t#{comment}" unless comment.empty?
+      puts line
     when 0xE1ED  # comment only
       puts r
     when 0xE1EC  # symbol definition
