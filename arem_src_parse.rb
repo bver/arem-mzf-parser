@@ -1,7 +1,6 @@
 #!/bin/env ruby
 
 require 'bindata'
-#require 'mustache'
 
 abort "Usage:\n #$0 source.arem.mzf" unless ARGV.size == 1
 source_file = ARGV.first
@@ -273,11 +272,6 @@ File.open(source_file, 'r') do |mzf|
 
     if templates.key? row_code
       expr, comment = expression(r)
-#      line = Mustache.new
-#      line[:expr] = expr 
-#      line[:comment] = comment
-#      line.template = templates[row_code]
-#      puts line.render
       line = templates[row_code] + "\t#{expr}"
       line += "\t#{comment}" unless comment.empty?
       puts line
