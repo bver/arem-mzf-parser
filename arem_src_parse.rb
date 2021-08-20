@@ -113,7 +113,7 @@ class RowInstr < BaseRecord
             8 => 'BC', 9 => 'DE', 0xA => 'HL', 0xB => 'SP', 0xC => 'IX', 0xD => 'IY', 0xE => 'AF', 0xF => "AF'",
             0x10 => 'NZ', 0x11 => 'Z', 0x12 => 'NC', 0x13 => 'C', 0x14 => 'PO', 0x15 => 'PE', 0x16 => 'P', 0x17 => 'M',
             0x18 => '(HL)', 0x19 => '(BC)', 0x1A => '(DE)', 0x1B => '(SP)', 0x1C => '(C)', 0x1D => '(IX)', 0x1E => '(IY)',
-            0x27 => :symbol, 0x28 => :symbol_indirect, 0x29 => :symbol_ind_ix
+            0x27 => :symbol, 0x28 => :symbol_indirect, 0x29 => :symbol_ind_ix, 0x2A => :symbol_ind_iy
           }
 
   attr_accessor :symbol, :comment
@@ -135,6 +135,8 @@ class RowInstr < BaseRecord
       "(#{symbol})"
     when :symbol_ind_ix
       "(IX#{symbol})"
+    when :symbol_ind_iy
+      "(IY#{symbol})"
     else
       arg
     end
