@@ -68,9 +68,6 @@ class RowSymbol < BaseRecord
   string :symbol, read_length: lambda { sym_len - 0x80 }
   uint8 :assign_sign
   virtual assert: lambda { assign_sign == '='.ord }
-#  def decode
-#    "#{symbol}=#{val.decode}"
-#  end
 end
 
 class Row < BaseRecord
@@ -84,12 +81,8 @@ end
 
 def parse(klass, str)
   raise "Empty string for parsing #{klass}" if str.empty?
-#  xx = (0...str.size).map {|i| str[i].ord.to_s(16)}
-#  puts "BEFORE klass=#{klass}  r: [#{xx.join(' ')}] }"  
   record = klass.read str
-#  puts "MIDDLE klass=#{klass} num_bytes=#{record.num_bytes}  r: '#{str}'"
   str.slice!(0, record.num_bytes)
-#  puts "AFTER klass=#{klass} r: '#{str}'"
   record
 end
 
@@ -248,101 +241,7 @@ instructions = {
 (191..192).each {|k| instructions[k] = 'IN' }  #	2
 (197..198).each {|k| instructions[k] = 'OUT' } #	2
 
-templates = {  # instructions
-  0xE0B8 => "JP",
-  0xE11C => "DJNZ",
-  0xE0C2 => "JP",
-  0xE0FE => "JP",
-
-  0xDE10 => "CPL",
-  0xDB9A => "EX",
-  0xDE2E => "SCF",
-  0xDFB4 => "SLA",
-
-  0xDD84 => "CP",
-  0xDD8E => "CP",
-  0xDD98 => "CP",
-  0xDDA2 => "CP",
-
-  0xE0CC => "JR",
-
-  0xE0D6 => "JR",
-  0xE0F4 => "JR",
-  0xE0EA => "JR",
-  0xE0E0 => "JR",
-
-  0xE126 => "CALL",
-  0xE13A => "RET",
-  0xE144 => "RET",
-  0xDE42 => "HALT",
-  0xDE38 => "NOP",
-
-  0xDB5E => "PUSH",
-  0xDB7C => "POP",
-  
-  0xDDB6 => "INC",
-  0xDEB0 => "INC",
-
-  0xDDDE => "DEC",
-  0xDECE => "DEC",
-  
-  0xDF64 => "RRC",
-  0xDF14 => "RLC",
-  0xDCF8 => "AND",
-  0xDD20 => "OR",
-  0xDD52 => "XOR",
-  0xE040 => "BIT",
-  0xE162 => "RST",
-  0xE004 => "SRL",
-  0xDF8C => "RR",
-
-  0xDC26 => "ADD",
-  0xDC30 => "ADD",
-  0xDE7E => "ADD",
-  0xDC8A => "SUB",
-  0xDE92 => "SBC",
-  0xDC6C => "ADC",
-
-
-  0xDA00 => "LD",
-  0xDAD2 => "LD",
-  0xDA0A => "LD",
-  0xDA32 => "LD",
-  0xDA96 => "LD",
-  0xDA78 => "LD",
-  0xDAA0 => "LD",
-  0xDA14 => "LD",
-  0xDA82 => "LD",
-  0xDAF0 => "LD",
-  0xDA50 => "LD",
-  0xDA6E => "LD",
-  0xDAFA => "LD",
-  0xDADC => "LD",
-  0xDA1E => "LD",
-  0xDA3C => "LD",
-  0xDA5A => "LD",
-  0xDA8C => "LD",
-
-  0xDB18 => "LD",
-  0xDB22 => "LD",
-
-  0xDBD6 => "LDI",
-  0xDBF4 => "LDDR",
-  0xDBE0 => "LDIR",
-  0xDE06 => "DAA",
-  0xDE4C => "DI",
-
-  0xDC08 => "CPIR",
-  0xDBFE => "CPI",
-  0xDC1C => "CPDR",
-
-  0xE1A8 => "OUT",
-  0xE1B2 => "OUT",
-  0xE16C => "IN"
-
-}
-
-misc_templates = {
+templates = {
   0xE1E6 => "PUT\t{{expr}}\t{{{comment}}}",
   0xE1E4 => "ORG\t{{expr}}\t{{{comment}}}",
   0xE1EB => "{{expr}}:\t{{{comment}}}", # label
@@ -350,7 +249,6 @@ misc_templates = {
   0xE1E7 => "DEFB\t{{{expr}}}\t{{{comment}}}",
   0xE1EA => "DEFS\t{{{expr}}}\t{{{comment}}}",
   0xE1E9 => "DEFM\t{{{expr}}}\t{{{comment}}}"
-
 }
 
 File.open(source_file, 'r') do |mzf|
@@ -362,14 +260,10 @@ File.open(source_file, 'r') do |mzf|
     r = String(row.line)
 
     row_code = row.row_type.to_i
-#    row_code = 0xDA00 if row_code & 0xFF00 == 0xDA00   # several LDs
 
     instr_key = ((row_code - 0xDA00) / 10) + 1
     if instructions.key? instr_key
-
-    #if templates.key? 
       inst = RowInstr.parse_instr(row, r)
-      #line = templates[row_code]
       line = instructions[instr_key]
       line += "\t#{inst.arg1}" unless inst.arg1.empty?
       line += ",#{inst.arg2}" unless inst.arg2.empty?
@@ -378,12 +272,12 @@ File.open(source_file, 'r') do |mzf|
       next
     end
 
-    if misc_templates.key? row_code
+    if templates.key? row_code
       expr, comment = expression(r)
       line = Mustache.new
       line[:expr] = expr 
       line[:comment] = comment
-      line.template = misc_templates[row_code]
+      line.template = templates[row_code]
       puts line.render
       next
     end
