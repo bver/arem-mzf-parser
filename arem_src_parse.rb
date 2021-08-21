@@ -1,5 +1,8 @@
 #!/bin/env ruby
 
+# (c) 2021 Pavel Suchmann
+# This code is licensed under MIT license (see LICENSE.txt for details)
+
 require 'bindata'
 
 abort "Usage:\n #$0 source.arem.mzf" unless ARGV.size == 1
